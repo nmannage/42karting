@@ -18,17 +18,23 @@
   .container{max-width:1100px;margin:0 auto;padding:1.5rem}
   header{position:relative}
   .hero{
-    height:220px;
-    /* harmless default gradient while JS decides which image to load */
+    position:relative; height:220px; border-bottom:1px solid var(--border);
     background:linear-gradient(135deg,#222,#555);
-    display:flex; align-items:flex-end; border-bottom:1px solid var(--border);
+    overflow:hidden;
   }
-  .hero-overlay{width:100%; background:linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,0)); padding:1rem}
+  .hero img.hero-img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  }
+  .hero-overlay{
+    position:relative; z-index:1;
+    width:100%; height:100%;
+    background:linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,0));
+    display:flex; align-items:flex-end; padding:1rem;
+  }
   .brand{display:flex; align-items:center; gap:.6rem; color:#fff}
   .brand img{height:32px; width:auto}
   h1{margin:.2rem 0 0; font-size:1.6rem}
-  .note{color:var(--muted); margin:.25rem 0 1rem; font-size:.95rem}
-  .controls{display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 1rem}
+  .controls{display:flex; gap:.5rem; flex-wrap:wrap; margin:1rem 0}
   select{padding:.4rem .5rem;border:1px solid var(--border);border-radius:8px;background:#fff}
   table{width:100%;border-collapse:collapse}
   th,td{padding:.6rem .5rem;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
@@ -39,7 +45,6 @@
   .pill{display:inline-block;padding:.15rem .5rem;border-radius:999px;background:var(--pill);border:1px solid var(--border);font-size:.85rem}
   .pill.wet{background:var(--pill-wet-bg);border-color:var(--pill-wet-bd);color:var(--pill-wet-tx)}
   .section{margin-top:2rem}
-  .legend{font-size:.9rem;color:var(--muted);margin:.25rem 0 0}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
   .card{border:1px solid var(--border);border-radius:12px;padding:12px}
   .card h3{margin:.2rem 0 .6rem;font-size:1rem}
@@ -69,6 +74,11 @@
 <body>
   <header>
     <div class="hero">
+      <!-- primary hero with onerror fallback -->
+      <img class="hero-img"
+           src="assets/hero.jpg"
+           alt=""
+           onerror="this.onerror=null;this.src='assets/fallbacks/hero-fallback.svg'">
       <div class="hero-overlay">
         <div class="brand">
           <img src="assets/logo.svg" alt="Logo"
@@ -82,8 +92,6 @@
   </header>
 
   <div class="container">
-    <p class="note">Add an event TOML under <code>/data/&lt;School&gt;/</code> and list it in <code>data/events.json</code>. Blue chip means wet.</p>
-
     <div class="controls">
       <label>School:
         <select id="schoolFilter"></select>
@@ -124,7 +132,6 @@
       </thead>
       <tbody></tbody>
     </table>
-    <p class="legend">Tip: blue tint highlights wet sessions.</p>
 
     <div class="section">
       <h2>Venue records</h2>
@@ -152,18 +159,7 @@ function isWet(cond){ return String(cond||"").toLowerCase().includes("wet"); }
 function option(sel, val, text){ const o = document.createElement("option"); o.value = val; o.textContent = text; sel.appendChild(o); }
 function userUrl(u){ return `https://www.example.com/${encodeURIComponent(u)}`; }
 
-/* Hero image loader with fallback */
-(function(){
-  const heroEl = document.querySelector('.hero');
-  const primary = 'assets/hero.jpg';
-  const fallback = 'assets/fallbacks/hero-fallback.svg';
-  const test = new Image();
-  test.onload = () => { heroEl.style.backgroundImage = `url('${primary}')`; };
-  test.onerror = () => { heroEl.style.backgroundImage = `url('${fallback}')`; };
-  test.src = primary;
-})();
-
-/* Minimal parser for:
+/* Minimal parser
  * - top-level keys (id, name, venue, date, school, conditions, venue_img, track_img)
  * - [[drivers]] with { username, img }
  * - [[races]] with { id, name, laps, conditions? }
