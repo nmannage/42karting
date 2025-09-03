@@ -4,11 +4,11 @@ name = "42KartingHQ"
 venue = "20 Whitechapel"
 date = "03/09/25"
 school = "42 London"
-conditions = "wet"  # overall event condition
+conditions = "wet"
 
 # optional images (URL or repo path)
-venue_img = "assets/venues/42-karting-hq.jpg"
-track_img = "assets/tracks/42-karting-hq-layout.png"
+venue_img = "https://res.cloudinary.com/duclpwjgh/image/upload/v1756895277/42karting/Screenshot_2025-09-03_at_11.14.17_oytm5i.png"
+track_img = "https://res.cloudinary.com/duclpwjgh/image/upload/v1756895278/42karting/Screenshot_2025-09-03_at_11.13.28_gzt0zn.png"
 
 # drivers are defined once (images can be repo paths or full URLs)
 [[drivers]]
@@ -36,6 +36,29 @@ conditions = "dry"
 
   [[races.entries]]
   user = "gigi"
+  laptime = "00:52.991"
+
+  [[races.entries]]
+  user = "nmannage"
+  laptime = 51.333
+
+  [[races.entries]]
+  user = "moulinette"
+  laptime = "00:54.879"
+
+  [[races.entries]]
+  user = "norminette"
+  laptime = 55.320
+  
+
+[[races]]
+id = "heat-2"
+name = "Heat 2"
+laps = 10
+conditions = "wet"
+
+  [[races.entries]]
+  user = "gigi"
   laptime = 53.782                        # seconds or "mm:ss.mmm"
 
   [[races.entries]]
@@ -49,28 +72,6 @@ conditions = "dry"
   [[races.entries]]
   user = "norminette"
   laptime = "00:56.199"
-
-[[races]]
-id = "heat-2"
-name = "Heat 2"
-laps = 10
-conditions = "wet"
-
-  [[races.entries]]
-  user = "gigi"
-  laptime = "00:52.991"
-
-  [[races.entries]]
-  user = "nmannage"
-  laptime = 53.333
-
-  [[races.entries]]
-  user = "moulinette"
-  laptime = "00:54.879"
-
-  [[races.entries]]
-  user = "norminette"
-  laptime = 55.320
 
 [[races]]
 id = "final"
