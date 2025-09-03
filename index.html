@@ -162,13 +162,13 @@
     <!-- Events summary table (most recent first) -->
     <table id="eventsTable" class="section" aria-label="Events">
       <thead>
-        <tr>
-          <th>Venue</th>
-          <th>Date</th>
-          <th>Conditions</th>
-          <th>School</th>
-          <th>Event</th>
-        </tr>
+      <tr>
+        <th>Event</th>
+        <th>Date</th>
+        <th>Conditions</th>
+        <th>Venue</th>
+        <th>School</th>
+      </tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -513,12 +513,11 @@ function showTrackPage(venue){
     const eventBtn = `<button class="plain-link" data-event="${r.eventId}">${r.eventName||r.eventId}</button>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${i+1}</td>
-      <td class="user">${linkUser}</td>
-      <td class="time">${fmtTime(r.time)}</td>
-      <td class="date">${r.date}</td>
-      <td>${schoolBtn}</td>
       <td>${eventBtn}</td>
+      <td class="date">${m.date}</td>
+      <td><span class="${pillClass}">${m.conditions||""}</span></td>
+      <td>${venueBtn}</td>
+      <td>${schoolBtn}</td>
     `;
     topTbody.appendChild(tr);
   });
