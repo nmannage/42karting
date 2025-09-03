@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Go-Kart Leaderboard</title>
+<title>42 Karting - Leaderboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   :root{
@@ -79,17 +79,35 @@
   .race-card table{width:100%}
   .race-card th, .race-card td{border-bottom:1px solid var(--border); padding:.4rem .3rem}
 
-  /* Clickable text buttons (venue, school, event) */
+  /* Clickable text buttons (venue, school, event) — no layout shift */
   .plain-link{
     background:none; border:none; padding:0;
     color:inherit; font:inherit; cursor:pointer;
     display:inline-flex; align-items:center; gap:.25rem;
   }
   .plain-link::after{
-    content:""; opacity:0; transform:translateX(-4px);
-    transition:all .15s ease;
+    content:"›";                 /* always present */
+    display:inline-block;
+    width:1ch;                   /* reserve space so layout doesn't move */
+    opacity:0;
+    transform:translateX(-2px);
+    transition:opacity .15s ease, transform .15s ease;
+    pointer-events:none;
   }
-  .plain-link:hover::after{ content:"›"; opacity:1; transform:translateX(0); }
+  .plain-link:hover::after{
+    opacity:1;
+    transform:translateX(0);
+  }
+  /* keyboard focus without changing layout */
+  .plain-link:focus-visible{
+    outline:2px solid var(--link);
+    outline-offset:2px;
+    border-radius:6px;
+  }
+  
+  @media (prefers-reduced-motion: reduce){
+    .plain-link::after{ transition:none; }
+  }
 
   @media (max-width:640px){
     .brand img{height:44px}
@@ -210,7 +228,7 @@ function fmtTime(sec){
 }
 function isWet(cond){ return String(cond||"").toLowerCase().includes("wet"); }
 function option(sel, val, text){ const o = document.createElement("option"); o.value = val; o.textContent = text; sel.appendChild(o); }
-function userUrl(u){ return `https://www.example.com/${encodeURIComponent(u)}`; }
+function userUrl(u){ return `https://profile-v3.intra.42.fr/users/${encodeURIComponent(u)}`; }
 function dateScore(str){
   if (!str) return 0;
   // Support "DD/MM/YY", "DD/MM/YYYY", "YYYY-MM-DD"
