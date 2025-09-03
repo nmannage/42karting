@@ -66,12 +66,28 @@
   .event-header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
   .event-title{font-size:1.1rem;font-weight:600;margin:0}
   .event-meta{color:var(--muted);font-size:.95rem}
-  .media-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px}
+
+  /* >>> CHANGED: make media row span full width with a bigger track panel <<< */
+  .media-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr;  /* track wide, venue narrower */
+    gap:12px; margin-top:8px;
+  }
   .media-grid figure{margin:0}
-  .media-grid img{width:100%;height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+  .media-grid img{
+    width:100%;
+    height:260px;               /* taller so the track looks bigger */
+    object-fit:contain;         /* no crop, fill width with white letterbox */
+    background:#fff;
+    border-radius:10px; border:1px solid var(--border)
+  }
   .media-grid figcaption{font-size:.9rem;color:var(--muted);margin-top:6px}
   .media-btn{display:block; border:none; background:none; padding:0; cursor:pointer}
   .media-btn img{display:block}
+  @media (max-width:800px){
+    .media-grid{grid-template-columns:1fr} /* stack on small screens */
+    .media-grid img{height:220px}
+  }
 
   /* Race tables */
   .races{margin-top:1rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px}
@@ -100,26 +116,14 @@
     display:inline-flex; align-items:center; gap:.25rem;
   }
   .plain-link::after{
-    content:"›";                 /* always present */
-    display:inline-block;
-    width:1ch;                   /* reserve space so layout doesn't move */
-    opacity:0;
-    transform:translateX(-2px);
+    content:"›"; display:inline-block; width:1ch;
+    opacity:0; transform:translateX(-2px);
     transition:opacity .15s ease, transform .15s ease;
     pointer-events:none;
   }
-  .plain-link:hover::after{
-    opacity:1;
-    transform:translateX(0);
-  }
-  .plain-link:focus-visible{
-    outline:2px solid var(--link);
-    outline-offset:2px;
-    border-radius:6px;
-  }
-  @media (prefers-reduced-motion: reduce){
-    .plain-link::after{ transition:none; }
-  }
+  .plain-link:hover::after{ opacity:1; transform:translateX(0); }
+  .plain-link:focus-visible{ outline:2px solid var(--link); outline-offset:2px; border-radius:6px; }
+  @media (prefers-reduced-motion: reduce){ .plain-link::after{ transition:none; } }
 
   @media (max-width:640px){
     .brand img{height:44px}
@@ -437,15 +441,27 @@ function initFilters(){
 
     if (venueEl){
       const v = venueEl.getAttribute('data-venue') || '';
-      if (v){ venueSel.value = v; hideTrackPage(); render(); window.scrollTo({top:0, behavior:'smooth'}); }
+      if (v){
+        venueSel.value = v;
+        document.getElementById('eventFilter').value = "(All)";  // show all events at this venue
+        hideTrackPage(); render();
+        document.getElementById('eventsTable').scrollIntoView({behavior:'smooth', block:'start'});
+      }
     }
     if (schoolEl){
       const s = schoolEl.getAttribute('data-school') || '';
-      if (s){ schoolSel.value = s; hideTrackPage(); render(); window.scrollTo({top:0, behavior:'smooth'}); }
+      if (s){
+        schoolSel.value = s;
+        document.getElementById('eventFilter').value = "(All)";  // show all events of this school
+        hideTrackPage(); render();
+        document.getElementById('eventsTable').scrollIntoView({behavior:'smooth', block:'start'});
+      }
     }
     if (eventEl){
       const id = eventEl.getAttribute('data-event') || '';
-      if (id){ document.getElementById('eventFilter').value = id; hideTrackPage(); render();
+      if (id){
+        document.getElementById('eventFilter').value = id;       // jump straight to event
+        hideTrackPage(); render();
         document.getElementById('eventDetails').scrollIntoView({behavior:'smooth', block:'start'});
       }
     }
@@ -620,17 +636,11 @@ function render(){
     evMeta.innerHTML = [metaVenue, m.date, `<button class="plain-link" data-school="${m.school}">${m.school}</button>`]
                         .filter(Boolean).join(" • ");
 
-    // Media (with fallbacks) — track image is clickable to open Track page
+    // Media (with fallbacks)
     evMedia.innerHTML = "";
-    const venueSrc = (m.venue_img && m.venue_img.trim()) ? m.venue_img : 'assets/fallbacks/venue.svg';
+
+    // >>> CHANGED: append TRACK first (wide col), then VENUE (narrow col)
     const trackSrc = (m.track_img && m.track_img.trim()) ? m.track_img : 'assets/fallbacks/track.svg';
-
-    const figVenue = document.createElement("figure");
-    figVenue.innerHTML = `<img loading="lazy" src="${venueSrc}" alt="Venue image"
-                            onerror="this.onerror=null;this.src='assets/fallbacks/venue.svg'">
-                          <figcaption>Venue</figcaption>`;
-    evMedia.appendChild(figVenue);
-
     const figTrack = document.createElement("figure");
     figTrack.innerHTML = `
       <button class="media-btn" data-track-venue="${m.venue}">
@@ -639,6 +649,13 @@ function render(){
       </button>
       <figcaption>Track layout</figcaption>`;
     evMedia.appendChild(figTrack);
+
+    const venueSrc = (m.venue_img && m.venue_img.trim()) ? m.venue_img : 'assets/fallbacks/venue.svg';
+    const figVenue = document.createElement("figure");
+    figVenue.innerHTML = `<img loading="lazy" src="${venueSrc}" alt="Venue image"
+                            onerror="this.onerror=null;this.src='assets/fallbacks/venue.svg'">
+                          <figcaption>Venue</figcaption>`;
+    evMedia.appendChild(figVenue);
 
     // Races with per-race tables
     evRaces.innerHTML = "";
