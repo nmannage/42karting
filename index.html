@@ -17,28 +17,25 @@
   a:hover{text-decoration:underline}
   .container{max-width:1100px;margin:0 auto;padding:1.5rem}
 
-  /* HERO — compact height, earlier position, cover (may crop a bit) */
+  /* HERO — fixed height, image fits with white letterbox */
   header{position:relative}
   .hero{
     position:relative;
-    height:220px; /* compact like earlier */
+    height:220px;
     border-bottom:1px solid var(--border);
-    background:#222;
+    background:#fff;
     overflow:hidden;
   }
   .hero img.hero-img{
     position:absolute; inset:0;
     width:100%; height:100%;
-    object-fit:cover; /* fill width/height, minimal real estate */
+    object-fit:contain;    /* fit without cropping */
+    object-position:center;
   }
-  .hero-overlay{
-    position:absolute; inset:0;
-    background:linear-gradient(to top, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 60%);
-    display:flex; align-items:flex-end; padding:1rem;
-  }
+  .brand-wrap{position:absolute; left:1rem; bottom:1rem;}
   .brand{
     display:flex; align-items:center; gap:.75rem; color:#fff;
-    background:rgba(17,24,39,.6);
+    background:rgba(17,24,39,.7);
     border:1px solid rgba(255,255,255,.18);
     padding:.6rem .9rem; border-radius:14px;
     backdrop-filter:saturate(1.2) blur(2px);
@@ -82,6 +79,18 @@
   .race-card table{width:100%}
   .race-card th, .race-card td{border-bottom:1px solid var(--border); padding:.4rem .3rem}
 
+  /* Clickable text buttons (venue, school, event) */
+  .plain-link{
+    background:none; border:none; padding:0;
+    color:inherit; font:inherit; cursor:pointer;
+    display:inline-flex; align-items:center; gap:.25rem;
+  }
+  .plain-link::after{
+    content:""; opacity:0; transform:translateX(-4px);
+    transition:all .15s ease;
+  }
+  .plain-link:hover::after{ content:"›"; opacity:1; transform:translateX(0); }
+
   @media (max-width:640px){
     .brand img{height:44px}
     h1{font-size:1.4rem}
@@ -91,15 +100,13 @@
 <body>
   <header>
     <div class="hero">
-      <!-- Try hero.jpg, then hero.png, then hero.svg, then fallback -->
+      <!-- try hero.jpg, then hero.png, then hero.svg, then fallback -->
       <img id="heroImg" class="hero-img" alt="">
-      <div class="hero-overlay">
+      <div class="brand-wrap">
         <div class="brand">
           <img src="assets/logo.svg" alt="Logo"
                onerror="this.onerror=null;this.src='assets/fallbacks/logo.svg'">
-          <div>
-            <h1>Go-Kart Leaderboard</h1>
-          </div>
+          <div><h1>Go-Kart Leaderboard</h1></div>
         </div>
       </div>
     </div>
@@ -118,6 +125,20 @@
       </label>
     </div>
 
+    <!-- Events summary table (most recent first) -->
+    <table id="eventsTable" class="section" aria-label="Events">
+      <thead>
+        <tr>
+          <th>Venue</th>
+          <th>Date</th>
+          <th>Conditions</th>
+          <th>School</th>
+          <th>Event</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
     <!-- Event details -->
     <div id="eventDetails" class="section">
       <div class="event-card">
@@ -131,6 +152,7 @@
       </div>
     </div>
 
+    <!-- Global best laps -->
     <table id="board" class="section" aria-label="Global best laptimes">
       <thead>
         <tr>
@@ -157,11 +179,7 @@
 /* ----------- hero loader (jpg -> png -> svg -> fallback) ----------- */
 (function(){
   const el = document.getElementById('heroImg');
-  const candidates = [
-    'assets/hero.jpg',
-    'assets/hero.png',
-    'assets/hero.svg'
-  ];
+  const candidates = ['assets/hero.jpg','assets/hero.png','assets/hero.svg'];
   const fallback = 'assets/fallbacks/hero-fallback.svg';
   let i = 0;
   function tryNext(){
@@ -193,13 +211,31 @@ function fmtTime(sec){
 function isWet(cond){ return String(cond||"").toLowerCase().includes("wet"); }
 function option(sel, val, text){ const o = document.createElement("option"); o.value = val; o.textContent = text; sel.appendChild(o); }
 function userUrl(u){ return `https://www.example.com/${encodeURIComponent(u)}`; }
+function dateScore(str){
+  if (!str) return 0;
+  // Support "DD/MM/YY", "DD/MM/YYYY", "YYYY-MM-DD"
+  const s = String(str).trim();
+  let d = 0;
+  if (s.includes('/')){
+    const [a,b,c] = s.split('/');
+    if (a && b && c){
+      let dd = parseInt(a,10), mm = parseInt(b,10)-1, yy = parseInt(c,10);
+      if (c.length === 2) yy = 2000 + yy;
+      d = Date.UTC(yy, mm, dd);
+    }
+  } else if (s.includes('-')){
+    const [y,m,dn] = s.split('-');
+    if (y && m && dn){
+      d = Date.UTC(parseInt(y,10), parseInt(m,10)-1, parseInt(dn,10));
+    }
+  } else {
+    const t = Date.parse(s);
+    d = Number.isFinite(t) ? t : 0;
+  }
+  return Number.isFinite(d) ? d : 0;
+}
 
-/* Minimal parser
- * - top-level keys (id, name, venue, date, school, conditions, venue_img, track_img)
- * - [[drivers]] with { username, img }
- * - [[races]] with { id, name, laps, conditions? }
- * - [[races.entries]] with { user, laptime }
- */
+/* Minimal parser for the TOML format used here */
 function parseEventTOML(toml){
   const lines = toml.split(/\r?\n/);
   const meta = {};
@@ -332,21 +368,70 @@ function initFilters(){
   schoolSel.addEventListener("change", render);
   venueSel.addEventListener("change", render);
   eventSel.addEventListener("change", render);
+
+  // click delegation for venue/school/event "plain-link" buttons
+  document.addEventListener('click', (e)=>{
+    const venueEl = e.target.closest('[data-venue]');
+    const schoolEl = e.target.closest('[data-school]');
+    const eventEl = e.target.closest('[data-event]');
+    if (venueEl){
+      const v = venueEl.getAttribute('data-venue') || '';
+      if (v){ venueSel.value = v; render(); window.scrollTo({top:0, behavior:'smooth'}); }
+    }
+    if (schoolEl){
+      const s = schoolEl.getAttribute('data-school') || '';
+      if (s){ schoolSel.value = s; render(); window.scrollTo({top:0, behavior:'smooth'}); }
+    }
+    if (eventEl){
+      const id = eventEl.getAttribute('data-event') || '';
+      if (id){ document.getElementById('eventFilter').value = id; render();
+        document.getElementById('eventDetails').scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    }
+  });
 }
 
 function render(){
-  const schoolVal = document.getElementById("schoolFilter").value;
-  const venueVal = document.getElementById("venueFilter").value;
-  const eventVal = document.getElementById("eventFilter").value;
+  const schoolSel = document.getElementById("schoolFilter");
+  const venueSel = document.getElementById("venueFilter");
+  const eventSel = document.getElementById("eventFilter");
 
-  // Filter rows for global best table
+  const schoolVal = schoolSel.value;
+  const venueVal = venueSel.value;
+  const eventVal = eventSel.value;
+
+  /* -------- Events summary table (most recent first) -------- */
+  const eventsTBody = document.querySelector("#eventsTable tbody");
+  eventsTBody.innerHTML = "";
+  const eventsArr = [...EVENTS.values()].map(ev => ev.meta);
+  eventsArr.sort((a,b)=>dateScore(b.date)-dateScore(a.date)); // newest first
+  for (const m of eventsArr){
+    // apply current School/Venue filters to this table too
+    if (schoolVal !== "(All)" && m.school !== schoolVal) continue;
+    if (venueVal !== "(All)" && m.venue !== venueVal) continue;
+
+    const pillClass = isWet(m.conditions) ? "pill wet" : "pill";
+    const tr = document.createElement("tr");
+    const venueBtn = `<button class="plain-link" data-venue="${m.venue}">${m.venue}</button>`;
+    const schoolBtn = `<button class="plain-link" data-school="${m.school}">${m.school}</button>`;
+    const eventBtn = `<button class="plain-link" data-event="${m.id}">${m.name}</button>`;
+    tr.innerHTML = `
+      <td>${venueBtn}</td>
+      <td class="date">${m.date}</td>
+      <td><span class="${pillClass}">${m.conditions||""}</span></td>
+      <td>${schoolBtn}</td>
+      <td>${eventBtn}</td>
+    `;
+    eventsTBody.appendChild(tr);
+  }
+
+  /* -------- Global best table -------- */
   let rows = ROWS.slice();
   if (schoolVal !== "(All)") rows = rows.filter(r => r.school === schoolVal);
   if (venueVal !== "(All)") rows = rows.filter(r => r.venue === venueVal);
   if (eventVal !== "(All)") rows = rows.filter(r => r.eventId === eventVal);
   rows.sort((a,b)=>a.time-b.time);
 
-  // Render global table
   const tbody = document.querySelector("#board tbody");
   tbody.innerHTML = "";
   rows.forEach((r,i)=>{
@@ -355,96 +440,24 @@ function render(){
     const avatarSrc = (r.img && r.img.trim()) ? r.img : 'assets/fallbacks/avatar.svg';
     const imgTag = `<img class="avatar" src="${avatarSrc}" alt="${r.username}"
                      onerror="this.onerror=null;this.src='assets/fallbacks/avatar.svg'">`;
+    const venueBtn = `<button class="plain-link" data-venue="${r.venue}">${r.venue}</button>`;
+    const schoolBtn = `<button class="plain-link" data-school="${r.school}">${r.school}</button>`;
+    const eventBtn = `<button class="plain-link" data-event="${r.eventId}">${r.eventName||r.eventId}</button>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="rank">${i+1}</td>
       <td class="user">${imgTag}<span>${link}</span></td>
       <td class="time">${fmtTime(r.time)}</td>
-      <td>${r.venue}</td>
+      <td>${venueBtn}</td>
       <td class="date">${r.date}</td>
       <td><span class="${pillClass}">${r.conditions||""}</span></td>
-      <td>${r.school}</td>
-      <td>${r.eventName||r.eventId}</td>
+      <td>${schoolBtn}</td>
+      <td>${eventBtn}</td>
     `;
     tbody.appendChild(tr);
   });
 
-  // Event details panel
-  const detailsWrap = document.getElementById("eventDetails");
-  const evTitle = document.getElementById("evTitle");
-  const evCond = document.getElementById("evCond");
-  const evMeta = document.getElementById("evMeta");
-  const evMedia = document.getElementById("evMedia");
-  const evRaces = document.getElementById("evRaces");
-
-  if (eventVal !== "(All)" && EVENTS.has(eventVal)){
-    const ev = EVENTS.get(eventVal);
-    const m = ev.meta;
-    evTitle.textContent = m.name;
-    evCond.textContent = m.conditions || "";
-    evCond.className = isWet(m.conditions) ? "pill wet" : "pill";
-    evMeta.textContent = [m.venue, m.date, m.school].filter(Boolean).join(" • ");
-
-    // Media (with fallbacks)
-    evMedia.innerHTML = "";
-    const venueSrc = (m.venue_img && m.venue_img.trim()) ? m.venue_img : 'assets/fallbacks/venue.svg';
-    const trackSrc = (m.track_img && m.track_img.trim()) ? m.track_img : 'assets/fallbacks/track.svg';
-
-    const figVenue = document.createElement("figure");
-    figVenue.innerHTML = `<img loading="lazy" src="${venueSrc}" alt="Venue image"
-                            onerror="this.onerror=null;this.src='assets/fallbacks/venue.svg'">
-                          <figcaption>Venue</figcaption>`;
-    evMedia.appendChild(figVenue);
-
-    const figTrack = document.createElement("figure");
-    figTrack.innerHTML = `<img loading="lazy" src="${trackSrc}" alt="Track layout"
-                            onerror="this.onerror=null;this.src='assets/fallbacks/track.svg'">
-                          <figcaption>Track layout</figcaption>`;
-    evMedia.appendChild(figTrack);
-
-    // Races with per-race tables
-    evRaces.innerHTML = "";
-    for (const r of ev.races){
-      const card = document.createElement("div");
-      card.className = "race-card";
-      const condPill = r.conditions ? `<span class="${isWet(r.conditions) ? 'pill wet' : 'pill'}" style="margin-left:.5rem">${r.conditions}</span>` : "";
-      card.innerHTML = `<h3>${r.name || r.id}${condPill}</h3><div class="meta">${r.laps ? `${r.laps} laps` : ""}</div>`;
-      const tbl = document.createElement("table");
-      tbl.innerHTML = `
-        <thead><tr><th>#</th><th>Driver</th><th>Lap</th></tr></thead>
-        <tbody></tbody>
-      `;
-      const body = tbl.querySelector("tbody");
-      const sorted = r.entries.slice().sort((a,b)=>a.laptime-b.laptime);
-      sorted.forEach((e,i)=>{
-        const profile = (ev.driversMap.get(e.user) || '').trim() || 'assets/fallbacks/avatar.svg';
-        const linkUser = `<a href="${userUrl(e.user)}" target="_blank" rel="noopener">${e.user}</a>`;
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td class="user">
-            <img class="avatar" src="${profile}" alt="${e.user}"
-                 onerror="this.onerror=null;this.src='assets/fallbacks/avatar.svg'">
-            <span>${linkUser}</span>
-          </td>
-          <td class="time">${fmtTime(e.laptime)}</td>
-        `;
-        body.appendChild(tr);
-      });
-      card.appendChild(tbl);
-      evRaces.appendChild(card);
-    }
-
-    detailsWrap.style.display = "block";
-  } else {
-    detailsWrap.style.display = "none";
-    evMedia.innerHTML = "";
-    evMeta.textContent = "";
-    evTitle.textContent = "";
-    evRaces.innerHTML = "";
-  }
-
-  // Venue records for current filter
+  /* -------- Venue records -------- */
   const byVenue = new Map();
   for (const r of rows){
     if (!byVenue.has(r.venue)) byVenue.set(r.venue, []);
@@ -461,8 +474,9 @@ function render(){
     const pillClass = isWet(best.conditions) ? "pill wet" : "pill";
     const linkBest = `<a href="${userUrl(best.username)}" target="_blank" rel="noopener">${best.username}</a>`;
     const recAvatar = (best.img && best.img.trim()) ? best.img : 'assets/fallbacks/avatar.svg';
+    const venueBtn = `<button class="plain-link" data-venue="${venue}">${venue}</button>`;
     card.innerHTML = `
-      <h3>${venue}</h3>
+      <h3>${venueBtn}</h3>
       <div class="record">
         <img class="avatar" src="${recAvatar}" alt="${best.username}"
              onerror="this.onerror=null;this.src='assets/fallbacks/avatar.svg'">
