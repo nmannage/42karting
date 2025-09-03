@@ -1,0 +1,92 @@
+# data/42-London/mile-end-2025-09-03.toml
+id = "mile-end-2025-09-03"
+name = "Mile End Meetup"
+venue = "London Mile End Revolution Karting"
+date = "03/09/25"
+school = "42 London"
+conditions = "wet"
+
+# optional images (URL or repo path)
+venue_img = "assets/venues/mile-end.jpg"
+track_img = "assets/tracks/mile-end-layout.png"
+
+# drivers are defined once (images can be repo paths or full URLs)
+[[drivers]]
+username = "gigi"
+img = "assets/avatars/gigi.jpg"
+
+[[drivers]]
+username = "nmannage"
+img = "assets/avatars/nmannage.jpg"
+
+[[drivers]]
+username = "moulinette"
+img = "assets/avatars/moulinette.jpg"
+
+[[drivers]]
+username = "norminette"
+img = "https://example.com/avatars/norminette.png"
+
+# multiple races in the same event
+[[races]]
+id = "heat-1"
+name = "Heat 1"
+laps = 12
+
+  [[races.entries]]
+  user = "gigi"
+  laptime = 53.782                        # seconds or "mm:ss.mmm"
+
+  [[races.entries]]
+  user = "nmannage"
+  laptime = "00:54.210"
+
+  [[races.entries]]
+  user = "moulinette"
+  laptime = 55.004
+
+  [[races.entries]]
+  user = "norminette"
+  laptime = "00:56.199"
+
+[[races]]
+id = "heat-2"
+name = "Heat 2"
+laps = 10
+
+  [[races.entries]]
+  user = "gigi"
+  laptime = "00:52.991"
+
+  [[races.entries]]
+  user = "nmannage"
+  laptime = 53.333
+
+  [[races.entries]]
+  user = "moulinette"
+  laptime = "00:54.879"
+
+  [[races.entries]]
+  user = "norminette"
+  laptime = 55.320
+
+[[races]]
+id = "final"
+name = "Final"
+laps = 15
+
+  [[races.entries]]
+  user = "gigi"
+  laptime = 53.450
+
+  [[races.entries]]
+  user = "nmannage"
+  laptime = "00:52.870"
+
+  [[races.entries]]
+  user = "moulinette"
+  laptime = 54.620
+
+  [[races.entries]]
+  user = "norminette"
+  laptime = "00:55.905"
