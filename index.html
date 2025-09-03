@@ -125,6 +125,15 @@
   .plain-link:focus-visible{ outline:2px solid var(--link); outline-offset:2px; border-radius:6px; }
   @media (prefers-reduced-motion: reduce){ .plain-link::after{ transition:none; } }
 
+  /* Avatar preview popover */
+  #avatarPreview{
+    position:absolute; display:none; z-index:9999; pointer-events:none;
+    background:#fff; border:1px solid var(--border); border-radius:12px; padding:6px;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+  }
+  #avatarPreview img{width:180px;height:180px;object-fit:cover;border-radius:10px;display:block}
+  #avatarPreview .name{margin-top:6px; text-align:center; font-weight:600; font-size:.95rem}
+
   @media (max-width:640px){
     .brand img{height:44px}
     h1{font-size:1.4rem}
@@ -239,6 +248,12 @@
     </div>
   </div>
 
+  <!-- Avatar preview root -->
+  <div id="avatarPreview" aria-hidden="true">
+    <img alt="">
+    <div class="name"></div>
+  </div>
+
 <script>
 /* ----------- hero loader (jpg -> png -> svg -> fallback) ----------- */
 (function(){
@@ -298,6 +313,16 @@ function dateScore(str){
   return Number.isFinite(d) ? d : 0;
 }
 
+/* display helpers */
+function trimTextSafe(s, n){
+  s = String(s || '');
+  return s.length <= n ? s : s.slice(0, n-1) + '…';
+}
+function cleanSchool(s){
+  // remove standalone "42", collapse multiple spaces
+  return String(s || '').replace(/\b42\b/g, '').replace(/\s{2,}/g,' ').trim();
+}
+
 /* Minimal parser for the TOML format used here */
 function parseEventTOML(toml){
   const lines = toml.split(/\r?\n/);
@@ -348,7 +373,7 @@ async function load(){
     const txt = await fetch(p, { cache:"no-store" }).then(r => r.text());
     const { meta, drivers, races } = parseEventTOML(txt);
     const id = meta.id || p;
-       const name = meta.name || id;
+    const name = meta.name || id;
 
     // drivers map for quick lookup
     const dmap = new Map();
@@ -509,8 +534,8 @@ function showTrackPage(venue){
                           .slice(0, 15);
   rowsAtVenue.forEach((r,i)=>{
     const linkUser = `<a href="${userUrl(r.username)}" target="_blank" rel="noopener">${r.username}</a>`;
-    const schoolBtn = `<button class="plain-link" data-school="${r.school}">${r.school}</button>`;
-    const eventBtn = `<button class="plain-link" data-event="${r.eventId}">${r.eventName||r.eventId}</button>`;
+    const schoolBtn = `<button class="plain-link" data-school="${r.school}">${cleanSchool(r.school)}</button>`;
+    const eventBtn = `<button class="plain-link" data-event="${r.eventId}">${trimTextSafe(r.eventName||r.eventId,15)}</button>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${i+1}</td>
@@ -530,8 +555,8 @@ function showTrackPage(venue){
   metas.sort((a,b)=>dateScore(b.date)-dateScore(a.date));
   for (const m of metas){
     const pillClass = isWet(m.conditions) ? "pill wet" : "pill";
-    const schoolBtn = `<button class="plain-link" data-school="${m.school}">${m.school}</button>`;
-    const eventBtn = `<button class="plain-link" data-event="${m.id}">${m.name}</button>`;
+    const schoolBtn = `<button class="plain-link" data-school="${m.school}">${cleanSchool(m.school)}</button>`;
+    const eventBtn = `<button class="plain-link" data-event="${m.id}">${trimTextSafe(m.name,15)}</button>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="date">${m.date}</td>
@@ -573,11 +598,11 @@ function render(){
 
     const pillClass = isWet(m.conditions) ? "pill wet" : "pill";
     const tr = document.createElement("tr");
-    const venueBtn = `<button class="plain-link" data-venue="${m.venue}">${m.venue}</button>`;
-    const schoolBtn = `<button class="plain-link" data-school="${m.school}">${m.school}</button>`;
-    const eventBtn = `<button class="plain-link" data-event="${m.id}">${m.name}</button>`;
+    const venueBtn = `<button class="plain-link" data-venue="${m.venue}">${trimTextSafe(m.venue,15)}</button>`;
+    const schoolBtn = `<button class="plain-link" data-school="${m.school}">${cleanSchool(m.school)}</button>`;
+    const eventBtn = `<button class="plain-link" data-event="${m.id}">${trimTextSafe(m.name,15)}</button>`;
 
-    /* >>> changed order: Event, Date, Conditions, Venue, School <<< */
+    /* Order: Event, Date, Conditions, Venue, School */
     tr.innerHTML = `
       <td>${eventBtn}</td>
       <td class="date">${m.date}</td>
@@ -603,9 +628,9 @@ function render(){
     const avatarSrc = (r.img && r.img.trim()) ? r.img : 'assets/fallbacks/avatar.svg';
     const imgTag = `<img class="avatar" src="${avatarSrc}" alt="${r.username}"
                      onerror="this.onerror=null;this.src='assets/fallbacks/avatar.svg'">`;
-    const venueBtn = `<button class="plain-link" data-venue="${r.venue}">${r.venue}</button>`;
-    const schoolBtn = `<button class="plain-link" data-school="${r.school}">${r.school}</button>`;
-    const eventBtn = `<button class="plain-link" data-event="${r.eventId}">${r.eventName||r.eventId}</button>`;
+    const venueBtn = `<button class="plain-link" data-venue="${r.venue}">${trimTextSafe(r.venue,15)}</button>`;
+    const schoolBtn = `<button class="plain-link" data-school="${r.school}">${cleanSchool(r.school)}</button>`;
+    const eventBtn = `<button class="plain-link" data-event="${r.eventId}">${trimTextSafe(r.eventName||r.eventId,15)}</button>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="rank">${i+1}</td>
@@ -635,7 +660,7 @@ function render(){
     evCond.textContent = m.conditions || "";
     evCond.className = isWet(m.conditions) ? "pill wet" : "pill";
     const metaVenue = m.venue ? `<button class="plain-link" data-venue="${m.venue}">${m.venue}</button>` : "";
-    evMeta.innerHTML = [metaVenue, m.date, `<button class="plain-link" data-school="${m.school}">${m.school}</button>`]
+    evMeta.innerHTML = [metaVenue, m.date, `<button class="plain-link" data-school="${m.school}">${cleanSchool(m.school)}</button>`]
                         .filter(Boolean).join(" • ");
 
     // Media (with fallbacks)
@@ -701,7 +726,7 @@ function render(){
     evRaces.innerHTML = "";
   }
 
-  /* -------- Venue records -------- */
+  /* -------- Venue records (best DRY and best WET per venue) -------- */
   const byVenue = new Map();
   for (const r of rows){
     if (!byVenue.has(r.venue)) byVenue.set(r.venue, []);
@@ -711,23 +736,33 @@ function render(){
   wrap.innerHTML = "";
   const cards = [];
   for (const [venue, arr] of byVenue){
-    const best = arr.slice().sort((a,b)=>a.time-b.time)[0];
-    if (!best) continue;
+    const dryBest = arr.filter(x=>!isWet(x.conditions)).slice().sort((a,b)=>a.time-b.time)[0] || null;
+    const wetBest = arr.filter(x=> isWet(x.conditions)).slice().sort((a,b)=>a.time-b.time)[0] || null;
+    if (!dryBest && !wetBest) continue;
+
     const card = document.createElement("div");
     card.className = "card";
-    const pillClass = isWet(best.conditions) ? "pill wet" : "pill";
-    const linkBest = `<a href="${userUrl(best.username)}" target="_blank" rel="noopener">${best.username}</a>`;
-    const recAvatar = (best.img && best.img.trim()) ? best.img : 'assets/fallbacks/avatar.svg';
+    const mkRow = (best, label) => {
+      if (!best) return '';
+      const pillClass = isWet(best.conditions) ? "pill wet" : "pill";
+      const linkBest = `<a href="${userUrl(best.username)}" target="_blank" rel="noopener">${best.username}</a>`;
+      const recAvatar = (best.img && best.img.trim()) ? best.img : 'assets/fallbacks/avatar.svg';
+      return `
+        <div class="record" style="margin-top:.25rem">
+          <img class="avatar" src="${recAvatar}" alt="${best.username}"
+               onerror="this.onerror=null;this.src='assets/fallbacks/avatar.svg'">
+          <div class="who"><strong>${linkBest}</strong><br>
+            <span style="color:var(--muted)">${best.date} • ${cleanSchool(best.school)}</span>
+          </div>
+          <div class="best time" style="font-weight:600">${fmtTime(best.time)}</div>
+          <span class="${pillClass}">${label}</span>
+        </div>`;
+    };
     const venueBtn = `<button class="plain-link" data-venue="${venue}">${venue}</button>`;
     card.innerHTML = `
       <h3>${venueBtn}</h3>
-      <div class="record">
-        <img class="avatar" src="${recAvatar}" alt="${best.username}"
-             onerror="this.onerror=null;this.src='assets/fallbacks/avatar.svg'">
-        <div class="who"><strong>${linkBest}</strong><br><span style="color:var(--muted)">${best.date} • ${best.school}</span></div>
-        <div class="best time" style="font-weight:600">${fmtTime(best.time)}</div>
-        <span class="${pillClass}">${best.conditions||""}</span>
-      </div>
+      ${mkRow(dryBest, 'dry')}
+      ${mkRow(wetBest, 'wet')}
     `;
     cards.push(card);
   }
@@ -736,6 +771,64 @@ function render(){
 }
 
 load();
+
+/* -------- Avatar preview (hover 1s or click) -------- */
+(function(){
+  const root = document.getElementById('avatarPreview');
+  const img = root.querySelector('img');
+  const nameEl = root.querySelector('.name');
+  let timer = null;
+
+  function placeNear(target){
+    const r = target.getBoundingClientRect();
+    const vpX = window.scrollX || document.documentElement.scrollLeft;
+    const vpY = window.scrollY || document.documentElement.scrollTop;
+    const pad = 10;
+    let left = vpX + r.right + pad;
+    let top  = vpY + r.top - 20;
+    // keep on-screen
+    if (left + 200 > vpX + window.innerWidth) left = vpX + r.left - 200 - pad;
+    if (top + 220 > vpY + window.innerHeight) top = vpY + window.innerHeight - 220 - pad;
+    if (top < vpY) top = vpY + pad;
+    root.style.left = left + 'px';
+    root.style.top  = top  + 'px';
+  }
+  function showFor(target){
+    const src = target.getAttribute('src') || 'assets/fallbacks/avatar.svg';
+    img.src = src;
+    img.onerror = ()=>{ img.onerror=null; img.src='assets/fallbacks/avatar.svg'; };
+    const who = target.getAttribute('alt') || '';
+    nameEl.textContent = who;
+    placeNear(target);
+    root.style.display = 'block';
+    root.setAttribute('aria-hidden','false');
+  }
+  function hide(){
+    root.style.display = 'none';
+    root.setAttribute('aria-hidden','true');
+  }
+
+  document.addEventListener('mouseover', e=>{
+    const a = e.target.closest('img.avatar');
+    if (!a){ clearTimeout(timer); return; }
+    clearTimeout(timer);
+    timer = setTimeout(()=> showFor(a), 1000);
+  }, true);
+
+  document.addEventListener('mouseout', e=>{
+    const a = e.target.closest('img.avatar');
+    if (a){ clearTimeout(timer); hide(); }
+  }, true);
+
+  document.addEventListener('click', e=>{
+    const a = e.target.closest('img.avatar');
+    if (a){ clearTimeout(timer); showFor(a); }
+    else { hide(); }
+  });
+
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('resize', hide);
+})();
 </script>
 </body>
 </html>
