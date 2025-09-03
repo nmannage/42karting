@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>42 Karting - Leaderboard</title>
+<title>42 Karting Leaderboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   :root{
@@ -67,17 +67,17 @@
   .event-title{font-size:1.1rem;font-weight:600;margin:0}
   .event-meta{color:var(--muted);font-size:.95rem}
 
-  /* >>> CHANGED: make media row span full width with a bigger track panel <<< */
+  /* media row with bigger track panel */
   .media-grid{
     display:grid;
-    grid-template-columns:2fr 1fr;  /* track wide, venue narrower */
+    grid-template-columns:2fr 1fr;
     gap:12px; margin-top:8px;
   }
   .media-grid figure{margin:0}
   .media-grid img{
     width:100%;
-    height:260px;               /* taller so the track looks bigger */
-    object-fit:contain;         /* no crop, fill width with white letterbox */
+    height:260px;
+    object-fit:contain;
     background:#fff;
     border-radius:10px; border:1px solid var(--border)
   }
@@ -85,7 +85,7 @@
   .media-btn{display:block; border:none; background:none; padding:0; cursor:pointer}
   .media-btn img{display:block}
   @media (max-width:800px){
-    .media-grid{grid-template-columns:1fr} /* stack on small screens */
+    .media-grid{grid-template-columns:1fr}
     .media-grid img{height:220px}
   }
 
@@ -162,13 +162,13 @@
     <!-- Events summary table (most recent first) -->
     <table id="eventsTable" class="section" aria-label="Events">
       <thead>
-      <tr>
-        <th>Event</th>
-        <th>Date</th>
-        <th>Conditions</th>
-        <th>Venue</th>
-        <th>School</th>
-      </tr>
+        <tr>
+          <th>Event</th>
+          <th>Date</th>
+          <th>Conditions</th>
+          <th>Venue</th>
+          <th>School</th>
+        </tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -178,7 +178,7 @@
       <div class="track-card">
         <div class="track-title">
           <h2 id="trackTitle" style="margin:0;font-size:1.1rem;font-weight:600"></h2>
-          <button class="ghost-btn" id="closeTrack">Close</button>
+        <button class="ghost-btn" id="closeTrack">Close</button>
         </div>
         <div class="track-hero" style="margin-bottom:.5rem">
           <img id="trackImg" alt="Track layout">
@@ -348,7 +348,7 @@ async function load(){
     const txt = await fetch(p, { cache:"no-store" }).then(r => r.text());
     const { meta, drivers, races } = parseEventTOML(txt);
     const id = meta.id || p;
-    const name = meta.name || id;
+       const name = meta.name || id;
 
     // drivers map for quick lookup
     const dmap = new Map();
@@ -443,7 +443,7 @@ function initFilters(){
       const v = venueEl.getAttribute('data-venue') || '';
       if (v){
         venueSel.value = v;
-        document.getElementById('eventFilter').value = "(All)";  // show all events at this venue
+        document.getElementById('eventFilter').value = "(All)";
         hideTrackPage(); render();
         document.getElementById('eventsTable').scrollIntoView({behavior:'smooth', block:'start'});
       }
@@ -452,7 +452,7 @@ function initFilters(){
       const s = schoolEl.getAttribute('data-school') || '';
       if (s){
         schoolSel.value = s;
-        document.getElementById('eventFilter').value = "(All)";  // show all events of this school
+        document.getElementById('eventFilter').value = "(All)";
         hideTrackPage(); render();
         document.getElementById('eventsTable').scrollIntoView({behavior:'smooth', block:'start'});
       }
@@ -460,7 +460,7 @@ function initFilters(){
     if (eventEl){
       const id = eventEl.getAttribute('data-event') || '';
       if (id){
-        document.getElementById('eventFilter').value = id;       // jump straight to event
+        document.getElementById('eventFilter').value = id;
         hideTrackPage(); render();
         document.getElementById('eventDetails').scrollIntoView({behavior:'smooth', block:'start'});
       }
@@ -513,11 +513,12 @@ function showTrackPage(venue){
     const eventBtn = `<button class="plain-link" data-event="${r.eventId}">${r.eventName||r.eventId}</button>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${eventBtn}</td>
-      <td class="date">${m.date}</td>
-      <td><span class="${pillClass}">${m.conditions||""}</span></td>
-      <td>${venueBtn}</td>
+      <td>${i+1}</td>
+      <td class="user">${linkUser}</td>
+      <td class="time">${fmtTime(r.time)}</td>
+      <td class="date">${r.date}</td>
       <td>${schoolBtn}</td>
+      <td>${eventBtn}</td>
     `;
     topTbody.appendChild(tr);
   });
@@ -575,12 +576,14 @@ function render(){
     const venueBtn = `<button class="plain-link" data-venue="${m.venue}">${m.venue}</button>`;
     const schoolBtn = `<button class="plain-link" data-school="${m.school}">${m.school}</button>`;
     const eventBtn = `<button class="plain-link" data-event="${m.id}">${m.name}</button>`;
+
+    /* >>> changed order: Event, Date, Conditions, Venue, School <<< */
     tr.innerHTML = `
-      <td>${venueBtn}</td>
+      <td>${eventBtn}</td>
       <td class="date">${m.date}</td>
       <td><span class="${pillClass}">${m.conditions||""}</span></td>
+      <td>${venueBtn}</td>
       <td>${schoolBtn}</td>
-      <td>${eventBtn}</td>
     `;
     eventsTBody.appendChild(tr);
   }
@@ -638,7 +641,7 @@ function render(){
     // Media (with fallbacks)
     evMedia.innerHTML = "";
 
-    // >>> CHANGED: append TRACK first (wide col), then VENUE (narrow col)
+    // TRACK first (wide col), then VENUE (narrow col)
     const trackSrc = (m.track_img && m.track_img.trim()) ? m.track_img : 'assets/fallbacks/track.svg';
     const figTrack = document.createElement("figure");
     figTrack.innerHTML = `
