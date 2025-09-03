@@ -70,6 +70,8 @@
   .media-grid figure{margin:0}
   .media-grid img{width:100%;height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
   .media-grid figcaption{font-size:.9rem;color:var(--muted);margin-top:6px}
+  .media-btn{display:block; border:none; background:none; padding:0; cursor:pointer}
+  .media-btn img{display:block}
 
   /* Race tables */
   .races{margin-top:1rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px}
@@ -78,6 +80,18 @@
   .race-card .meta{color:var(--muted); font-size:.9rem; margin-bottom:.4rem}
   .race-card table{width:100%}
   .race-card th, .race-card td{border-bottom:1px solid var(--border); padding:.4rem .3rem}
+
+  /* Track page */
+  #trackPage{display:none}
+  .track-card{border:1px solid var(--border); border-radius:12px; padding:16px}
+  .track-title{display:flex; align-items:center; justify-content:space-between; gap:.75rem}
+  .ghost-btn{
+    background:#fff; border:1px solid var(--border); border-radius:10px;
+    padding:.35rem .6rem; cursor:pointer; color:var(--text); font:inherit;
+  }
+  .track-hero{display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-top:10px}
+  .track-hero img{width:100%; height:320px; object-fit:contain; background:#fff; border:1px solid var(--border); border-radius:10px}
+  @media (max-width:800px){ .track-hero{grid-template-columns:1fr} .track-hero img{height:260px}}
 
   /* Clickable text buttons (venue, school, event) — no layout shift */
   .plain-link{
@@ -98,13 +112,11 @@
     opacity:1;
     transform:translateX(0);
   }
-  /* keyboard focus without changing layout */
   .plain-link:focus-visible{
     outline:2px solid var(--link);
     outline-offset:2px;
     border-radius:6px;
   }
-  
   @media (prefers-reduced-motion: reduce){
     .plain-link::after{ transition:none; }
   }
@@ -156,6 +168,36 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <!-- Track page -->
+    <section id="trackPage" class="section">
+      <div class="track-card">
+        <div class="track-title">
+          <h2 id="trackTitle" style="margin:0;font-size:1.1rem;font-weight:600"></h2>
+          <button class="ghost-btn" id="closeTrack">Close</button>
+        </div>
+        <div class="track-hero" style="margin-bottom:.5rem">
+          <img id="trackImg" alt="Track layout">
+          <img id="venueImg" alt="Venue image">
+        </div>
+        <div class="races">
+          <div class="race-card">
+            <h3>Top laps at this venue</h3>
+            <table>
+              <thead><tr><th>#</th><th>Driver</th><th>Lap</th><th>Date</th><th>School</th><th>Event</th></tr></thead>
+              <tbody id="trackTopLaps"></tbody>
+            </table>
+          </div>
+          <div class="race-card">
+            <h3>Events at this venue</h3>
+            <table>
+              <thead><tr><th>Date</th><th>Conditions</th><th>School</th><th>Event</th></tr></thead>
+              <tbody id="trackEvents"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Event details -->
     <div id="eventDetails" class="section">
@@ -231,7 +273,6 @@ function option(sel, val, text){ const o = document.createElement("option"); o.v
 function userUrl(u){ return `https://profile-v3.intra.42.fr/users/${encodeURIComponent(u)}`; }
 function dateScore(str){
   if (!str) return 0;
-  // Support "DD/MM/YY", "DD/MM/YYYY", "YYYY-MM-DD"
   const s = String(str).trim();
   let d = 0;
   if (s.includes('/')){
@@ -383,32 +424,118 @@ function initFilters(){
     .forEach(([id, ev]) => option(eventSel, id, ev.meta.name));
 
   schoolSel.value="(All)"; venueSel.value="(All)"; eventSel.value="(All)";
-  schoolSel.addEventListener("change", render);
-  venueSel.addEventListener("change", render);
-  eventSel.addEventListener("change", render);
+  schoolSel.addEventListener("change", ()=>{ hideTrackPage(); render(); });
+  venueSel.addEventListener("change", ()=>{ hideTrackPage(); render(); });
+  eventSel.addEventListener("change", ()=>{ hideTrackPage(); render(); });
 
-  // click delegation for venue/school/event "plain-link" buttons
+  // click delegation for venue/school/event text buttons
   document.addEventListener('click', (e)=>{
     const venueEl = e.target.closest('[data-venue]');
     const schoolEl = e.target.closest('[data-school]');
     const eventEl = e.target.closest('[data-event]');
+    const trackEl = e.target.closest('[data-track-venue]');
+
     if (venueEl){
       const v = venueEl.getAttribute('data-venue') || '';
-      if (v){ venueSel.value = v; render(); window.scrollTo({top:0, behavior:'smooth'}); }
+      if (v){ venueSel.value = v; hideTrackPage(); render(); window.scrollTo({top:0, behavior:'smooth'}); }
     }
     if (schoolEl){
       const s = schoolEl.getAttribute('data-school') || '';
-      if (s){ schoolSel.value = s; render(); window.scrollTo({top:0, behavior:'smooth'}); }
+      if (s){ schoolSel.value = s; hideTrackPage(); render(); window.scrollTo({top:0, behavior:'smooth'}); }
     }
     if (eventEl){
       const id = eventEl.getAttribute('data-event') || '';
-      if (id){ document.getElementById('eventFilter').value = id; render();
+      if (id){ document.getElementById('eventFilter').value = id; hideTrackPage(); render();
         document.getElementById('eventDetails').scrollIntoView({behavior:'smooth', block:'start'});
       }
     }
+    if (trackEl){
+      const v = trackEl.getAttribute('data-track-venue') || '';
+      if (v){ showTrackPage(v); }
+    }
   });
+
+  document.getElementById('closeTrack').addEventListener('click', hideTrackPage);
 }
 
+/* ---------- Track page helpers ---------- */
+function latestMediaForVenue(venue){
+  let pick = null;
+  for (const {meta} of EVENTS.values()){
+    if (meta.venue !== venue) continue;
+    if (!pick || dateScore(meta.date) > dateScore(pick.date)) pick = meta;
+  }
+  return pick ? {
+    venue_img: pick.venue_img || '',
+    track_img: pick.track_img || '',
+    date: pick.date
+  } : { venue_img:'', track_img:'', date:'' };
+}
+
+function showTrackPage(venue){
+  // populate images (prefer latest event media for that venue)
+  const media = latestMediaForVenue(venue);
+  const trackImg = document.getElementById('trackImg');
+  const venueImg = document.getElementById('venueImg');
+  trackImg.src = media.track_img && media.track_img.trim() ? media.track_img : 'assets/fallbacks/track.svg';
+  venueImg.src = media.venue_img && media.venue_img.trim() ? media.venue_img : 'assets/fallbacks/venue.svg';
+  trackImg.onerror = ()=>{ trackImg.onerror=null; trackImg.src='assets/fallbacks/track.svg'; };
+  venueImg.onerror = ()=>{ venueImg.onerror=null; venueImg.src='assets/fallbacks/venue.svg'; };
+
+  document.getElementById('trackTitle').textContent = `Track — ${venue}`;
+
+  // top laps at this venue across all events
+  const topTbody = document.getElementById('trackTopLaps');
+  topTbody.innerHTML = "";
+  const rowsAtVenue = ROWS.filter(r => r.venue === venue)
+                          .slice()
+                          .sort((a,b)=>a.time-b.time)
+                          .slice(0, 15);
+  rowsAtVenue.forEach((r,i)=>{
+    const linkUser = `<a href="${userUrl(r.username)}" target="_blank" rel="noopener">${r.username}</a>`;
+    const schoolBtn = `<button class="plain-link" data-school="${r.school}">${r.school}</button>`;
+    const eventBtn = `<button class="plain-link" data-event="${r.eventId}">${r.eventName||r.eventId}</button>`;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td class="user">${linkUser}</td>
+      <td class="time">${fmtTime(r.time)}</td>
+      <td class="date">${r.date}</td>
+      <td>${schoolBtn}</td>
+      <td>${eventBtn}</td>
+    `;
+    topTbody.appendChild(tr);
+  });
+
+  // events at this venue (most recent first)
+  const eventsTbody = document.getElementById('trackEvents');
+  eventsTbody.innerHTML = "";
+  const metas = [...EVENTS.values()].map(ev => ev.meta).filter(m => m.venue === venue);
+  metas.sort((a,b)=>dateScore(b.date)-dateScore(a.date));
+  for (const m of metas){
+    const pillClass = isWet(m.conditions) ? "pill wet" : "pill";
+    const schoolBtn = `<button class="plain-link" data-school="${m.school}">${m.school}</button>`;
+    const eventBtn = `<button class="plain-link" data-event="${m.id}">${m.name}</button>`;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="date">${m.date}</td>
+      <td><span class="${pillClass}">${m.conditions||""}</span></td>
+      <td>${schoolBtn}</td>
+      <td>${eventBtn}</td>
+    `;
+    eventsTbody.appendChild(tr);
+  }
+
+  document.getElementById('trackPage').style.display = "block";
+  document.getElementById('eventDetails').style.display = "none";
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function hideTrackPage(){
+  document.getElementById('trackPage').style.display = "none";
+}
+
+/* ----------- render ----------- */
 function render(){
   const schoolSel = document.getElementById("schoolFilter");
   const venueSel = document.getElementById("venueFilter");
@@ -474,6 +601,86 @@ function render(){
     `;
     tbody.appendChild(tr);
   });
+
+  /* -------- Event details panel -------- */
+  const detailsWrap = document.getElementById("eventDetails");
+  const evTitle = document.getElementById("evTitle");
+  const evCond = document.getElementById("evCond");
+  const evMeta = document.getElementById("evMeta");
+  const evMedia = document.getElementById("evMedia");
+  const evRaces = document.getElementById("evRaces");
+
+  if (eventVal !== "(All)" && EVENTS.has(eventVal)){
+    const ev = EVENTS.get(eventVal);
+    const m = ev.meta;
+    evTitle.textContent = m.name;
+    evCond.textContent = m.conditions || "";
+    evCond.className = isWet(m.conditions) ? "pill wet" : "pill";
+    const metaVenue = m.venue ? `<button class="plain-link" data-venue="${m.venue}">${m.venue}</button>` : "";
+    evMeta.innerHTML = [metaVenue, m.date, `<button class="plain-link" data-school="${m.school}">${m.school}</button>`]
+                        .filter(Boolean).join(" • ");
+
+    // Media (with fallbacks) — track image is clickable to open Track page
+    evMedia.innerHTML = "";
+    const venueSrc = (m.venue_img && m.venue_img.trim()) ? m.venue_img : 'assets/fallbacks/venue.svg';
+    const trackSrc = (m.track_img && m.track_img.trim()) ? m.track_img : 'assets/fallbacks/track.svg';
+
+    const figVenue = document.createElement("figure");
+    figVenue.innerHTML = `<img loading="lazy" src="${venueSrc}" alt="Venue image"
+                            onerror="this.onerror=null;this.src='assets/fallbacks/venue.svg'">
+                          <figcaption>Venue</figcaption>`;
+    evMedia.appendChild(figVenue);
+
+    const figTrack = document.createElement("figure");
+    figTrack.innerHTML = `
+      <button class="media-btn" data-track-venue="${m.venue}">
+        <img loading="lazy" src="${trackSrc}" alt="Track layout"
+             onerror="this.onerror=null;this.src='assets/fallbacks/track.svg'">
+      </button>
+      <figcaption>Track layout</figcaption>`;
+    evMedia.appendChild(figTrack);
+
+    // Races with per-race tables
+    evRaces.innerHTML = "";
+    for (const r of ev.races){
+      const card = document.createElement("div");
+      card.className = "race-card";
+      const condPill = r.conditions ? `<span class="${isWet(r.conditions) ? 'pill wet' : 'pill'}" style="margin-left:.5rem">${r.conditions}</span>` : "";
+      card.innerHTML = `<h3>${r.name || r.id}${condPill}</h3><div class="meta">${r.laps ? `${r.laps} laps` : ""}</div>`;
+      const tbl = document.createElement("table");
+      tbl.innerHTML = `
+        <thead><tr><th>#</th><th>Driver</th><th>Lap</th></tr></thead>
+        <tbody></tbody>
+      `;
+      const body = tbl.querySelector("tbody");
+      const sorted = r.entries.slice().sort((a,b)=>a.laptime-b.laptime);
+      sorted.forEach((e,i)=>{
+        const profile = (ev.driversMap.get(e.user) || '').trim() || 'assets/fallbacks/avatar.svg';
+        const linkUser = `<a href="${userUrl(e.user)}" target="_blank" rel="noopener">${e.user}</a>`;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td class="user">
+            <img class="avatar" src="${profile}" alt="${e.user}"
+                 onerror="this.onerror=null;this.src='assets/fallbacks/avatar.svg'">
+            <span>${linkUser}</span>
+          </td>
+          <td class="time">${fmtTime(e.laptime)}</td>
+        `;
+        body.appendChild(tr);
+      });
+      card.appendChild(tbl);
+      evRaces.appendChild(card);
+    }
+
+    detailsWrap.style.display = "block";
+  } else {
+    detailsWrap.style.display = "none";
+    evMedia.innerHTML = "";
+    evMeta.textContent = "";
+    evTitle.textContent = "";
+    evRaces.innerHTML = "";
+  }
 
   /* -------- Venue records -------- */
   const byVenue = new Map();
