@@ -67,10 +67,10 @@
   .event-title{font-size:1.1rem;font-weight:600;margin:0}
   .event-meta{color:var(--muted);font-size:.95rem}
 
-  /* media row with bigger track panel */
+  /* media row with bigger track/venue panel */
   .media-grid{
     display:grid;
-    grid-template-columns:2fr 1fr;
+    grid-template-columns:2fr 1fr;  /* first figure is wide */
     gap:12px; margin-top:8px;
   }
   .media-grid figure{margin:0}
@@ -659,14 +659,21 @@ function render(){
     evTitle.textContent = m.name;
     evCond.textContent = m.conditions || "";
     evCond.className = isWet(m.conditions) ? "pill wet" : "pill";
-    const metaVenue = m.venue ? `<button class="plain-link" data-venue="${m.venue}">${m.venue}</button>` : "";
-    evMeta.innerHTML = [metaVenue, m.date, `<button class="plain-link" data-school="${m.school}">${cleanSchool(m.school)}</button>`]
-                        .filter(Boolean).join(" • ");
 
-    // Media (with fallbacks)
+    // Event meta — venue + date only (school removed as requested)
+    const metaVenue = m.venue ? `<button class="plain-link" data-venue="${m.venue}">${m.venue}</button>` : "";
+    evMeta.innerHTML = [metaVenue, m.date].filter(Boolean).join(" • ");
+
+    // Media (with fallbacks) — SWAPPED: VENUE first (wide), then TRACK (narrow)
     evMedia.innerHTML = "";
 
-    // TRACK first (wide col), then VENUE (narrow col)
+    const venueSrc = (m.venue_img && m.venue_img.trim()) ? m.venue_img : 'assets/fallbacks/venue.svg';
+    const figVenue = document.createElement("figure");
+    figVenue.innerHTML = `<img loading="lazy" src="${venueSrc}" alt="Venue image"
+                            onerror="this.onerror=null;this.src='assets/fallbacks/venue.svg'">
+                          <figcaption>Venue</figcaption>`;
+    evMedia.appendChild(figVenue);
+
     const trackSrc = (m.track_img && m.track_img.trim()) ? m.track_img : 'assets/fallbacks/track.svg';
     const figTrack = document.createElement("figure");
     figTrack.innerHTML = `
@@ -676,13 +683,6 @@ function render(){
       </button>
       <figcaption>Track layout</figcaption>`;
     evMedia.appendChild(figTrack);
-
-    const venueSrc = (m.venue_img && m.venue_img.trim()) ? m.venue_img : 'assets/fallbacks/venue.svg';
-    const figVenue = document.createElement("figure");
-    figVenue.innerHTML = `<img loading="lazy" src="${venueSrc}" alt="Venue image"
-                            onerror="this.onerror=null;this.src='assets/fallbacks/venue.svg'">
-                          <figcaption>Venue</figcaption>`;
-    evMedia.appendChild(figVenue);
 
     // Races with per-race tables
     evRaces.innerHTML = "";
@@ -726,7 +726,7 @@ function render(){
     evRaces.innerHTML = "";
   }
 
-  /* -------- Venue records (best DRY and best WET per venue) -------- */
+  /* -------- Venue records (show FULL school; best DRY and best WET) -------- */
   const byVenue = new Map();
   for (const r of rows){
     if (!byVenue.has(r.venue)) byVenue.set(r.venue, []);
@@ -752,7 +752,7 @@ function render(){
           <img class="avatar" src="${recAvatar}" alt="${best.username}"
                onerror="this.onerror=null;this.src='assets/fallbacks/avatar.svg'">
           <div class="who"><strong>${linkBest}</strong><br>
-            <span style="color:var(--muted)">${best.date} • ${cleanSchool(best.school)}</span>
+            <span style="color:var(--muted)">${best.date} • ${best.school}</span>
           </div>
           <div class="best time" style="font-weight:600">${fmtTime(best.time)}</div>
           <span class="${pillClass}">${label}</span>
