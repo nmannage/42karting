@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Go-Kart Leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --border:#e5e7eb; --text:#111827; --muted:#6b7280; --bg:#ffffff;
+    --pill:#f3f4f6; --pill-wet-bg:rgba(59,130,246,.12);
+    --pill-wet-bd:rgba(59,130,246,.35); --pill-wet-tx:#1e40af;
+  }
+  *{box-sizing:border-box}
+  body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;color:var(--text);background:var(--bg)}
+  .container{max-width:1100px;margin:0 auto;padding:1.5rem}
+  header{position:relative}
+  .hero{
+    height:220px; background:url("./assets/hero.jpg") center/cover no-repeat;
+    display:flex; align-items:flex-end; border-bottom:1px solid var(--border);
+  }
+  .hero-overlay{width:100%; background:linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,0)); padding:1rem}
+  .brand{display:flex; align-items:center; gap:.6rem; color:#fff}
+  .brand img{height:32px; width:auto}
+  h1{margin:.2rem 0 0; font-size:1.6rem}
+  .note{color:var(--muted); margin:.25rem 0 1rem; font-size:.95rem}
+  .controls{display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 1rem}
+  select{padding:.4rem .5rem;border:1px solid var(--border);border-radius:8px;background:#fff}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:.6rem .5rem;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+  th{font-weight:600}
+  .rank,.time,.date{font-variant-numeric:tabular-nums}
+  .user{display:flex;align-items:center;gap:.5rem}
+  img.avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+  .pill{display:inline-block;padding:.15rem .5rem;border-radius:999px;background:var(--pill);border:1px solid var(--border);font-size:.85rem}
+  .pill.wet{background:var(--pill-wet-bg);border-color:var(--pill-wet-bd);color:var(--pill-wet-tx)}
+  .section{margin-top:2rem}
+  .legend{font-size:.9rem;color:var(--muted);margin:.25rem 0 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .card{border:1px solid var(--border);border-radius:12px;padding:12px}
+  .card h3{margin:.2rem 0 .6rem;font-size:1rem}
+  .record{display:flex;align-items:center;gap:.5rem}
+  .record .who{flex:1}
+
+  /* Event details */
+  #eventDetails{display:none}
+  .event-card{border:1px solid var(--border);border-radius:12px;padding:16px}
+  .event-header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .event-title{font-size:1.1rem;font-weight:600;margin:0}
+  .event-meta{color:var(--muted);font-size:.95rem}
+  .media-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px}
+  .media-grid figure{margin:0}
+  .media-grid img{width:100%;height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+  .media-grid figcaption{font-size:.9rem;color:var(--muted);margin-top:6px}
+
+  /* Race tables */
+  .races{margin-top:1rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px}
+  .race-card{border:1px solid var(--border); border-radius:12px; padding:12px}
+  .race-card h3{margin:.2rem 0 .4rem; font-size:1rem}
+  .race-card .meta{color:var(--muted); font-size:.9rem; margin-bottom:.4rem}
+  .race-card table{width:100%}
+  .race-card th, .race-card td{border-bottom:1px solid var(--border); padding:.4rem .3rem}
+</style>
+</head>
+<body>
+  <header>
+    <div class="hero">
+      <div class="hero-overlay">
+        <div class="brand">
+          <img src="./assets/logo.svg" alt="Logo">
+          <div>
+            <h1>Go-Kart Leaderboard</h1>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <p class="note">PR flow: add a new <code>.toml</code> under <code>/data/&lt;School&gt;/</code> and list it in <code>data/events.json</code>. Blue chip means wet.</p>
+
+    <div class="controls">
+      <label>School:
+        <select id="schoolFilter"></select>
+      </label>
+      <label>Venue:
+        <select id="venueFilter"></select>
+      </label>
+      <label>Event:
+        <select id="eventFilter"></select>
+      </label>
+    </div>
+
+    <!-- Event details -->
+    <div id="eventDetails" class="section">
+      <div class="event-card">
+        <div class="event-header">
+          <h2 class="event-title" id="evTitle"></h2>
+          <span class="pill" id="evCond"></span>
+        </div>
+        <div class="event-meta" id="evMeta"></div>
+        <div class="media-grid" id="evMedia"></div>
+        <div class="races" id="evRaces"></div>
+      </div>
+    </div>
+
+    <table id="board" class="section">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Driver</th>
+          <th>Best Lap</th>
+          <th>Venue</th>
+          <th>Date</th>
+          <th>Conditions</th>
+          <th>School</th>
+          <th>Event</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p class="legend">Tip: blue tint highlights wet sessions.</p>
+
+    <div class="section">
+      <h2>Venue records</h2>
+      <div id="records" class="grid"></div>
+    </div>
+  </div>
+
+<script>
+function toSeconds(t){
+  if (typeof t === "number") return t;
+  if (typeof t === "string" && t.includes(":")){
+    const [mm, ss] = t.split(":"); const s = parseFloat(ss), m = parseInt(mm,10);
+    if (Number.isFinite(s) && Number.isFinite(m)) return m*60 + s;
+  }
+  const n = Number(t);
+  return Number.isFinite(n) ? n : NaN;
+}
+function fmtTime(sec){
+  if (!Number.isFinite(sec)) return "";
+  const m = Math.floor(sec/60), s = sec - m*60;
+  return `${String(m).padStart(2,"0")}:${s.toFixed(3).padStart(6,"0")}`;
+}
+function isWet(cond){ return String(cond||"").toLowerCase().includes("wet"); }
+function option(sel, val, text){ const o = document.createElement("option"); o.value = val; o.textContent = text; sel.appendChild(o); }
+function userUrl(u){ return `https://www.example.com/${encodeURIComponent(u)}`; }
+
+/* Minimal parser for:
+ * - top-level keys (id, name, venue, date, school, conditions, venue_img, track_img)
+ * - [[drivers]] with { username, img }
+ * - [[races]] with { id, name, laps }
+ * - [[races.entries]] with { user, laptime }
+ */
+function parseEventTOML(toml){
+  const lines = toml.split(/\r?\n/);
+  const meta = {};
+  const drivers = [];
+  const races = [];
+  let curDriver = null;
+  let curRace = null;
+  let curEntry = null;
+
+  function flushEntry(){ if (curEntry){ (curRace.entries || (curRace.entries=[])).push(curEntry); curEntry=null; } }
+  function flushDriver(){ if (curDriver){ drivers.push(curDriver); curDriver=null; } }
+  function flushRace(){ if (curRace){ flushEntry(); races.push(curRace); curRace=null; } }
+
+  for (const raw of lines){
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    if (line === "[[drivers]]"){ flushEntry(); flushRace(); flushDriver(); curDriver = {}; continue; }
+    if (line === "[[races]]"){ flushEntry(); flushRace(); curRace = {}; continue; }
+    if (line === "[[races.entries]]"){ flushEntry(); if (!curRace) curRace = {}; curEntry = {}; continue; }
+
+    const m = line.match(/^([A-Za-z0-9_]+)\s*=\s*(.+)$/);
+    if (!m) continue;
+    const key = m[1];
+    let val = m[2].trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1,-1);
+    else if (!Number.isNaN(Number(val))) val = Number(val);
+
+    if (curEntry){ curEntry[key] = val; continue; }
+    if (curRace){ curRace[key] = val; continue; }
+    if (curDriver){ curDriver[key] = val; continue; }
+    meta[key] = val;
+  }
+  flushEntry(); flushRace(); flushDriver();
+  return { meta, drivers, races };
+}
+
+let ROWS = [];            // best per driver per event (for global table)
+const EVENTS = new Map(); // eventId -> { meta, driversMap, races[] }
+
+async function load(){
+  const paths = await fetch("data/events.json", { cache:"no-store" }).then(r => r.json());
+  const rows = [];
+
+  for (const p of paths){
+    const txt = await fetch(p, { cache:"no-store" }).then(r => r.text());
+    const { meta, drivers, races } = parseEventTOML(txt);
+    const id = meta.id || p;
+    const name = meta.name || id;
+
+    // drivers map for quick lookup
+    const dmap = new Map();
+    for (const d of drivers){ if (d.username) dmap.set(d.username, d.img || ""); }
+
+    // compute best per user across all races in this event
+    const best = new Map(); // username -> seconds
+    for (const r of races){
+      const entries = r.entries || [];
+      for (const e of entries){
+        const u = e.user || "";
+        const t = toSeconds(e.laptime);
+        if (!u || !Number.isFinite(t)) continue;
+        const prev = best.get(u);
+        if (prev == null || t < prev) best.set(u, t);
+      }
+    }
+
+    // global rows: one per user per event
+    for (const [u, t] of best){
+      rows.push({
+        username: u,
+        img: dmap.get(u) || "",
+        time: t,
+        venue: meta.venue || "",
+        date: meta.date || "",
+        school: meta.school || "",
+        conditions: meta.conditions || "",
+        eventId: id,
+        eventName: name
+      });
+    }
+
+    EVENTS.set(id, {
+      meta: {
+        id, name,
+        venue: meta.venue || "",
+        date: meta.date || "",
+        school: meta.school || "",
+        conditions: meta.conditions || "",
+        venue_img: meta.venue_img || "",
+        track_img: meta.track_img || ""
+      },
+      driversMap: dmap,
+      races: (races || []).map(r => ({
+        id: r.id || "",
+        name: r.name || "",
+        laps: r.laps || "",
+        entries: (r.entries || []).map(e => ({
+          user: e.user || "",
+          laptime: toSeconds(e.laptime)
+        })).filter(e => e.user && Number.isFinite(e.laptime))
+      }))
+    });
+  }
+
+  ROWS = rows;
+  initFilters();
+  render();
+}
+
+function initFilters(){
+  const schoolSel = document.getElementById("schoolFilter");
+  const venueSel = document.getElementById("venueFilter");
+  const eventSel = document.getElementById("eventFilter");
+  schoolSel.innerHTML = ""; venueSel.innerHTML = ""; eventSel.innerHTML = "";
+
+  const schools = new Set(["(All)"]);
+  const venues = new Set(["(All)"]);
+  for (const r of ROWS){ if (r.school) schools.add(r.school); if (r.venue) venues.add(r.venue); }
+
+  [...schools].sort().forEach(s => option(schoolSel, s, s));
+  [...venues].sort().forEach(v => option(venueSel, v, v));
+  option(eventSel, "(All)", "(All)");
+  [...EVENTS.entries()].sort((a,b)=>a[1].meta.name.localeCompare(b[1].meta.name))
+    .forEach(([id, ev]) => option(eventSel, id, ev.meta.name));
+
+  schoolSel.value="(All)"; venueSel.value="(All)"; eventSel.value="(All)";
+  schoolSel.addEventListener("change", render);
+  venueSel.addEventListener("change", render);
+  eventSel.addEventListener("change", render);
+}
+
+function render(){
+  const schoolVal = document.getElementById("schoolFilter").value;
+  const venueVal = document.getElementById("venueFilter").value;
+  const eventVal = document.getElementById("eventFilter").value;
+
+  // Filter rows for global best table
+  let rows = ROWS.slice();
+  if (schoolVal !== "(All)") rows = rows.filter(r => r.school === schoolVal);
+  if (venueVal !== "(All)") rows = rows.filter(r => r.venue === venueVal);
+  if (eventVal !== "(All)") rows = rows.filter(r => r.eventId === eventVal);
+  rows.sort((a,b)=>a.time-b.time);
+
+  // Render global table
+  const tbody = document.querySelector("#board tbody");
+  tbody.innerHTML = "";
+  rows.forEach((r,i)=>{
+    const tr = document.createElement("tr");
+    const pillClass = isWet(r.conditions) ? "pill wet" : "pill";
+    const link = `<a href="${userUrl(r.username)}" target="_blank" rel="noopener">${r.username}</a>`;
+    tr.innerHTML = `
+      <td class="rank">${i+1}</td>
+      <td class="user">${r.img?`<img class="avatar" src="${r.img}" alt="${r.username}">`:""}<span>${link}</span></td>
+      <td class="time">${fmtTime(r.time)}</td>
+      <td>${r.venue}</td>
+      <td class="date">${r.date}</td>
+      <td><span class="${pillClass}">${r.conditions||""}</span></td>
+      <td>${r.school}</td>
+      <td>${r.eventName||r.eventId}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Event details panel
+  const detailsWrap = document.getElementById("eventDetails");
+  const evTitle = document.getElementById("evTitle");
+  const evCond = document.getElementById("evCond");
+  const evMeta = document.getElementById("evMeta");
+  const evMedia = document.getElementById("evMedia");
+  const evRaces = document.getElementById("evRaces");
+
+  if (eventVal !== "(All)" && EVENTS.has(eventVal)){
+    const ev = EVENTS.get(eventVal);
+    const m = ev.meta;
+    evTitle.textContent = m.name;
+    evCond.textContent = m.conditions || "";
+    evCond.className = isWet(m.conditions) ? "pill wet" : "pill";
+    evMeta.textContent = [m.venue, m.date, m.school].filter(Boolean).join(" • ");
+
+    evMedia.innerHTML = "";
+    if (m.venue_img){
+      const fig = document.createElement("figure");
+      fig.innerHTML = `<img loading="lazy" src="${m.venue_img}" alt="Venue image"><figcaption>Venue</figcaption>`;
+      evMedia.appendChild(fig);
+    }
+    if (m.track_img){
+      const fig = document.createElement("figure");
+      fig.innerHTML = `<img loading="lazy" src="${m.track_img}" alt="Track layout"><figcaption>Track layout</figcaption>`;
+      evMedia.appendChild(fig);
+    }
+
+    // Races with per-race tables
+    evRaces.innerHTML = "";
+    for (const r of ev.races){
+      const card = document.createElement("div");
+      card.className = "race-card";
+      card.innerHTML = `<h3>${r.name || r.id}</h3><div class="meta">${r.laps ? `${r.laps} laps` : ""}</div>`;
+      const tbl = document.createElement("table");
+      tbl.innerHTML = `
+        <thead><tr><th>#</th><th>Driver</th><th>Lap</th></tr></thead>
+        <tbody></tbody>
+      `;
+      const body = tbl.querySelector("tbody");
+      const sorted = r.entries.slice().sort((a,b)=>a.laptime-b.laptime);
+      sorted.forEach((e,i)=>{
+        const img = ev.driversMap.get(e.user) || "";
+        const tr = document.createElement("tr");
+        const link = `<a href="${userUrl(e.user)}" target="_blank" rel="noopener">${e.user}</a>`;
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td class="user">${img?`<img class="avatar" src="${img}" alt="${e.user}">`:""}<span>${link}</span></td>
+          <td class="time">${fmtTime(e.laptime)}</td>
+        `;
+        body.appendChild(tr);
+      });
+      card.appendChild(tbl);
+      evRaces.appendChild(card);
+    }
+
+    detailsWrap.style.display = "block";
+  } else {
+    detailsWrap.style.display = "none";
+    evMedia.innerHTML = "";
+    evMeta.textContent = "";
+    evTitle.textContent = "";
+    evRaces.innerHTML = "";
+  }
+
+  // Venue records for current filter
+  const byVenue = new Map();
+  for (const r of rows){
+    if (!byVenue.has(r.venue)) byVenue.set(r.venue, []);
+    byVenue.get(r.venue).push(r);
+  }
+  const wrap = document.getElementById("records");
+  wrap.innerHTML = "";
+  const cards = [];
+  for (const [venue, arr] of byVenue){
+    const best = arr.slice().sort((a,b)=>a.time-b.time)[0];
+    if (!best) continue;
+    const card = document.createElement("div");
+    card.className = "card";
+    const pillClass = isWet(best.conditions) ? "pill wet" : "pill";
+    const link = `<a href="${userUrl(best.username)}" target="_blank" rel="noopener">${best.username}</a>`;
+    card.innerHTML = `
+      <h3>${venue}</h3>
+      <div class="record">
+        ${best.img?`<img class="avatar" src="${best.img}" alt="${best.username}">`:""}
+        <div class="who"><strong>${link}</strong><br><span style="color:var(--muted)">${best.date} • ${best.school}</span></div>
+        <div class="best time" style="font-weight:600">${fmtTime(best.time)}</div>
+        <span class="${pillClass}">${best.conditions||""}</span>
+      </div>
+    `;
+    cards.push(card);
+  }
+  cards.sort((a,b)=>a.querySelector("h3").textContent.localeCompare(b.querySelector("h3").textContent));
+  cards.forEach(c => wrap.appendChild(c));
+}
+
+load();
+</script>
+</body>
+</html>
