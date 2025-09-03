@@ -1,0 +1,107 @@
+# data/42-London/revolution-karting-mile-end-2025-09-03.toml
+id = "revolution-karting-mile-end-2025-09-03"
+name = "42 London - Go Kart Event #1"
+venue = "Revolution Karting - Mile End, London"
+date = "03/09/25"
+school = "42 London"
+conditions = "wet"
+
+# optional images (URL or repo path)
+venue_img = "https://res.cloudinary.com/duclpwjgh/image/upload/c_scale,w_860/v1756938437/42karting/venue/db0c52d9-10dc-460e-8b2d-07c635eb5b1e.png"
+track_img = "https://res.cloudinary.com/duclpwjgh/image/upload/e_contrast:0/v1756938723/42karting/venue/Screenshot_2025-09-03_at_23.29.45_hgnxgk.png"
+
+# drivers are defined once (images can be repo paths or full URLs)
+[[drivers]]
+username = "skirwan"
+img = "https://res.cloudinary.com/duclpwjgh/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1756937116/42karting/drivers/skirwan_myuwza.jpg"
+
+[[drivers]]
+username = "nmannage"
+img = "https://res.cloudinary.com/duclpwjgh/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1756937115/42karting/drivers/nmannage_innyq8.jpg"
+
+[[drivers]]
+username = "ogrativ"
+img = "https://res.cloudinary.com/duclpwjgh/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1756937116/42karting/drivers/ogrativ_vaoka4.jpg"
+
+[[drivers]]
+username = "dmelnyk"
+img = "https://res.cloudinary.com/duclpwjgh/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1756937115/42karting/drivers/dmelnyk_fzepz2.jpg"
+
+[[drivers]]
+username = "isahmed"
+img = "https://res.cloudinary.com/duclpwjgh/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1756937416/42karting/drivers/isahmed_y7vzf7.jpg"
+
+[[drivers]]
+username = "aalqanta"
+img = "https://res.cloudinary.com/duclpwjgh/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1756937115/42karting/drivers/aalqanta_x4nlvi.jpg"
+
+[[drivers]]
+username = "oeruogun"
+img = "https://res.cloudinary.com/duclpwjgh/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1756937116/42karting/drivers/oeruogun_q91n1q.jpg"
+
+# multiple races in the same event
+[[races]]
+id = "race-1"
+name = "Race 1"
+laps = 12
+
+  [[races.entries]]
+  user = "skirwan"
+  laptime = "00:59.950"
+
+  [[races.entries]]
+  user = "dmelnyk"
+  laptime = "01:07.919"
+
+  [[races.entries]]
+  user = "ogrativ"
+  laptime = "00:58.310"
+
+  [[races.entries]]
+  user = "isahmed"
+  laptime = "01:02.731"
+
+  [[races.entries]]
+  user = "oeruogun"
+  laptime = "01:03.675"
+
+  [[races.entries]]
+  user = "nmannage"
+  laptime = "01:02.683"
+
+  [[races.entries]]
+  user = "aalqanta"
+  laptime = "00:59.124"
+
+[[races]]
+id = "race-2"
+name = "Race 2"
+laps = 10
+
+  [[races.entries]]
+  user = "skirwan"
+  laptime = "00:57.047"
+
+  [[races.entries]]
+  user = "dmelnyk"
+  laptime = "00:58.739"
+
+  [[races.entries]]
+  user = "ogrativ"
+  laptime = "00:59.445"
+
+  [[races.entries]]
+  user = "isahmed"
+  laptime = "01:03.448"
+
+  [[races.entries]]
+  user = "oeruogun"
+  laptime = "01:05.656"
+
+  [[races.entries]]
+  user = "nmannage"
+  laptime = "00:55.858"
+
+  [[races.entries]]
+  user = "aalqanta"
+  laptime = "00:55.843"
