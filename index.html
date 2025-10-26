@@ -197,7 +197,7 @@
           <div class="race-card">
             <h3>Top laps at this venue</h3>
             <table>
-              <thead><tr><th>#</th><th>Driver</th><th>Lap</th><th>Date</th><th>School</th><th>Event</th></tr></thead>
+              <thead><tr><th>#</th><th>Driver</th><th>Best Lap</th><th>Date</th><th>School</th><th>Event</th></tr></thead>
               <tbody id="trackTopLaps"></tbody>
             </table>
           </div>
@@ -693,7 +693,7 @@ function render(){
       card.innerHTML = `<h3>${r.name || r.id}${condPill}</h3><div class="meta">${r.laps ? `${r.laps} laps` : ""}</div>`;
       const tbl = document.createElement("table");
       tbl.innerHTML = `
-        <thead><tr><th>#</th><th>Driver</th><th>Lap</th></tr></thead>
+        <thead><tr><th>#</th><th>Driver</th><th>Best Lap</th></tr></thead>
         <tbody></tbody>
       `;
       const body = tbl.querySelector("tbody");
